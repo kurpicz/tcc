@@ -12,12 +12,23 @@ DL = $(foreach DL_FILE_NAME, $(DL_FILE_NAMES), $(DATA_DIR)/$(DL_FILE_NAME))
 BZIP_DECOMPRESS = $(foreach FILE, $(wildcard $(DATA_DIR)/*/*.bz2), $(shell bzip2 -d $(FILE)))
 GZIP_DECOMPRESS = $(foreach FILE, $(wildcard $(DATA_DIR)/*/*.gz), $(shell gunzip $(FILE)))
 
+RD_ENTRIES = $(shell cat $(MAIN_CONFIG) | grep -v "^\#" | grep "RD;" | cut -f 2 -d ";")
+RD = $(foreach RD_ENTRY, $(RD_ENTRIES), $(DATA_DIR)/random/$(RD_ENTRY))
+
 download: $(DL)
 	$(BZIP_DECOMPRESS)
 	$(GZIP_DECOMPRESS) 
 
-random: random/random_number.cpp
-	$(CXX) -o random/random_number.o random/random_number.cpp
+random: $(RD)
+
+$(DATA_DIR)/random/%:
+	@$(eval FILE_NAME:=$(shell cat ./corpora.config |\
+		grep -v "^\#" | grep "RD;$*;" | cut -f 2 -d ';'))
+	@$(eval FILE_SIZE:=$(shell cat ./corpora.config |\
+			grep -v "^\#" | grep "RD;$*;" | cut -f 3 -d ';'))
+	@$(eval SYMBOL_WIDTH:=$(shell cat ./corpora.config |\
+			grep -v "^\#" | grep "RD;$*;" | cut -f 4 -d ';'))
+	@cd $(DATA_DIR)/random; dd bs=$(SYMBOL_WIDTH) if=/dev/urandom of=$(FILE_NAME) count=$(FILE_SIZE)
 
 $(DATA_DIR)/%:
 	@$(eval CONFIG_NAME:=$(shell echo $* | cut -f 1 -d '/'))

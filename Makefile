@@ -6,11 +6,13 @@
 # All rights reserved. Published under the BSD-2 license in the LICENSE file.
 ################################################################################
 
-DATA_DIR = data
-MAIN_CONFIG = ./corpora.config
+DATA_DIR := data
+MAIN_CONFIG := ./corpora.config
 
-CC=gcc
-CXX=g++
+CC := gcc
+CXX := g++
+CXXFLAGS := -std=c++11 -Wall -Wextra
+
 
 DL_CONFIG_FILES = $(shell cat $(MAIN_CONFIG) | grep -v "^\#" | grep "DL;" | cut -f 2 -d ";")
 DL_FILE_NAMES = $(foreach DL_CONFIG_FILE, $(DL_CONFIG_FILES),\
@@ -44,6 +46,11 @@ $(DATA_DIR)/%:
 	@$(eval URL:=$(shell cat ./corpora/$(CONFIG_NAME).config |\
 		grep -v "^\#" | grep "$(FILE_NAME);" | cut -f 3 -d ';'))
 	@cd $(DATA_DIR); mkdir -p $(basename $(CONFIG_NAME)); cd $(basename $(CONFIG_NAME)); wget -q $(URL)
+
+processing: $(patsubst %.cpp, %.o, $(wildcard processing/*.cpp))
+
+%.o: %.cpp
+	$(CXX) $< -o $@ $(CXXFLAGS)
 
 clean:
 	@rm -rf ./data; mkdir data

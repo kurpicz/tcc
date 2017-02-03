@@ -6,7 +6,7 @@
 # All rights reserved. Published under the BSD-2 license in the LICENSE file.
 ################################################################################
 
-DATA_DIR := data
+DATA_DIR := /scratch/data
 MAIN_CONFIG := ./corpora.config
 
 CC := gcc
@@ -41,6 +41,7 @@ $(DATA_DIR)/random/%:
 	@cd $(DATA_DIR)/random; dd bs=$(SYMBOL_WIDTH) if=/dev/urandom of=$(FILE_NAME) count=$(FILE_SIZE)
 
 $(DATA_DIR)/%:
+	@mkdir -p $(DATA_DIR)
 	@$(eval CONFIG_NAME:=$(shell echo $* | cut -f 1 -d '/'))
 	@$(eval FILE_NAME:=$(shell echo $* | cut -f 2 -d '/'))
 	@$(eval URL:=$(shell cat ./corpora/$(CONFIG_NAME).config |\

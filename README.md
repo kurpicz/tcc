@@ -1,4 +1,5 @@
 # Text Corpus Collection (tcc)
+This is work in progress!
 ## What is it?
 This project provides simple tools to obtain (popular) text corpora that are used for benchmarks and tests.
 

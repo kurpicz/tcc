@@ -6,7 +6,8 @@
  * All rights reserved. Published under the BSD-2 license in the LICENSE file.
  ******************************************************************************/
 
-// #define DEBUG = 1
+// #define CHECK = 1
+// #define PRINT_IDS = 1
 
 #include <cassert>
 #include <fstream>
@@ -14,39 +15,46 @@
 #include <unordered_map>
 #include <vector>
 
-template <typename AlphabetType>
+template <typename AlphabetType, size_t BUFFER_SIZE=1024>
 static void WriteWordBased(const std::string& file_name,
   std::ifstream& in_stream,
   const std::unordered_map<std::string, uint64_t>& word_list,
-  const uint64_t nr_words) {
+  [[maybe_unused]] const uint64_t nr_words) {
 
   // Set in_stream to the beginning of the text
   in_stream.clear();
   in_stream.seekg(0, std::ios::beg);
 
-  std::vector<AlphabetType> result;
-  result.reserve(nr_words);
+  std::array<AlphabetType, BUFFER_SIZE> buffer;
+  std::ofstream out_stream(file_name, std::ios::out | std::ofstream::binary);
 
   std::cout << "Creating text based on word-based alphabet." << std::endl;
   std::string cur_word;
+  size_t words_in_buffer = 0;
   while (in_stream >> cur_word) {
-    result.emplace_back(static_cast<AlphabetType>(
-      word_list.find(cur_word)->second));
+    buffer[words_in_buffer++] =
+      static_cast<AlphabetType>(word_list.find(cur_word)->second);
 
-#ifdef DEBUG
-    std::cout << cur_word << " gets id " << word_list.find(cur_word)->second << std::endl;
-#endif // DEBUG
+#ifdef PRINT_IDS
+    std::cout << cur_word << " gets id " << word_list.find(cur_word)->second
+              << std::endl;
+#endif // PRINT_IDS
+
+    if (words_in_buffer == BUFFER_SIZE) {
+      for (auto character : buffer) {
+        out_stream.write(reinterpret_cast<char*>(&character),
+                         sizeof(AlphabetType));
+      }
+      words_in_buffer = 0;
+    }
   }
-
-  std::cout << "Writing text to file." << std::endl;
-
-  std::ofstream out_stream(file_name, std::ios::out | std::ofstream::binary);
-  for (auto character : result) {
-    out_stream.write(reinterpret_cast<char*>(&character), sizeof(AlphabetType));
+  for (size_t i = 0; i < words_in_buffer; ++i) {
+    out_stream.write(reinterpret_cast<char*>(&buffer[i]), sizeof(AlphabetType));
   }
+  
   out_stream.close();
 
-#ifdef DEBUG
+#ifdef CHECK
   std::cout << "Checking correctness. Turn of by removing macro." << std::endl;
   std::ifstream test_stream(file_name, std::ios::in | std::ios::binary);
   std::vector<AlphabetType> tmp;
@@ -54,13 +62,20 @@ static void WriteWordBased(const std::string& file_name,
   test_stream.read(reinterpret_cast<char*>(tmp.data()),
     nr_words * sizeof(AlphabetType));
   test_stream.close();
-  for (uint64_t i = 0; i < nr_words; ++i) {
-    if (tmp[i] != result[i]) {
-      std::cout << "Error at position " << i << "." << std::endl;
+
+  in_stream.clear();
+  in_stream.seekg(0, std::ios::beg);
+  size_t cur_pos = 0;
+  while (in_stream >> cur_word) {
+    if (tmp[cur_pos++] !=
+        static_cast<AlphabetType>(word_list.find(cur_word)->second)) {
+      std::cout << "Error at position " << cur_pos - 1 << "." << std::endl;
       std::exit(EXIT_FAILURE);
     }
   }
-#endif // DEBUG
+  std::cout << "Test succeeded." << std::endl;
+#endif // CHECK
+  in_stream.close();
 }
 
 int main(int argc, char const *argv[]) {
